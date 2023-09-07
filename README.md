@@ -1,4 +1,4 @@
-To use the project:
+To use this project:
 
     To train the model, use the --train flag and specify the model type with the -m flag ("hog" or "cnn"). The trained encodings will be saved in a file.
 
