@@ -11,3 +11,11 @@ Key Features:
     Testing: You can also use the trained model to recognize faces in unknown images. Simply provide the path to an image with unknown faces, and the system will identify and label the recognized faces in the image.
 
     Customizable Output: Recognized faces are highlighted with bounding boxes in blue, and their names are displayed in white text on a blue background. This makes it easy to visualize and identify the recognized faces.
+
+
+Dependencies:
+
+    face_recognition: Used for face detection and recognition.
+    Pillow: Used for image processing and drawing bounding boxes.
+    pickle: Used for serializing and deserializing data.
+    argparse: Used for command-line argument parsing.
