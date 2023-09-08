@@ -20,10 +20,12 @@ Path("training").mkdir(parents=True, exist_ok=True)
 Path("output").mkdir(parents=True, exist_ok=True)
 Path("validation").mkdir(parents=True, exist_ok=True)
 
+#Encode known faces from images in the 'training' directory.
 def encode_known_faces(model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
     names = []
     encodings = []
     for filepath in Path("training").rglob("*/*"):
+        #Extracts the name of the person from the parent directory name and loads the image.
         name = filepath.parent.name
         image = face_recognition.load_image_file(filepath)
 
@@ -33,10 +35,12 @@ def encode_known_faces(model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
         # Uses face_recognition.face_encodings to generate encodings for the detected faces in an image
         face_encodings = face_recognition.face_encodings(image, face_locations)
 
+        #Appends the detected name and face encoding to the respective lists
         for encoding in face_encodings:
             names.append(name)
             encodings.append(encoding)
-
+   
+    #Creates a dictionary name_encodings with two keys: "names" (list of names) and "encodings" (list of face encodings).
     name_encodings = {"names": names, "encodings": encodings}
     with encodings_location.open(mode="wb") as f:
         pickle.dump(name_encodings, f)
