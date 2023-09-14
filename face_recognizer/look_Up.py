@@ -21,7 +21,6 @@ def option():
         else:
             print("Invalid choice. Please choose a valid option.")
         
-        choice = int(input("Enter choice based on options: "))
 
 def download_and_place_in_training():
     # Implement the logic to download and place pictures in the training folder
