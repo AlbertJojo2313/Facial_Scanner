@@ -8,7 +8,7 @@ def main():
 
     choice = int(input("Enter choice based on options: "))
 
-    while choice <= 3:
+    while (choice <= 3 && choice >= 1):
         if choice == 1:
             # Call a function to look up pictures and download them, then place them in the training folder
             download_and_place_in_training()
