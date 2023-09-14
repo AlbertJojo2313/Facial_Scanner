@@ -1,6 +1,6 @@
 from pathlib import Path
 
-def main():
+def option():
     print("Looks up picture")
     print("1. Puts images for training")
     print("2. Copies the trained images to validate")
