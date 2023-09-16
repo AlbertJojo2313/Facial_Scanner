@@ -3,6 +3,7 @@ import os
 import shutil
 from google_images_download import google_images_download
 
+
 def option():
     print("Looks up picture")
     print("1. Puts images for training")
@@ -21,18 +22,19 @@ def option():
         elif choice == 2:
             # Call a function to copy the training images to the validation folder
             source_directory = "/Face_Scanner/face_recognizer/training"  # Replace with the path to your source directory
-            destination_directory = "/Face_Scanner/face_recognizer/validation"    # Replace with the path to your "validation" folder
+            destination_directory = "/Face_Scanner/face_recognizer/validation"  # Replace with the path to your "validation" folder
             copy_training_to_validation(source_directory, destination_directory)
             break
-            
+
         elif choice == 3:
             # Call a function to copy the training images to the test folder
-            copy_training_to_test()
+            #copy_training_to_test()
             break
-        
+
         else:
             print("Invalid choice. Please choose a valid option.")
             break
+
 
 def download_and_place_in_training(name, num_images):
     # Create a directory for the subject if it doesn't exist
@@ -46,7 +48,7 @@ def download_and_place_in_training(name, num_images):
         "limit": num_images,
         "print_urls": True,
         "no_directory": True,
-        "output_directory": "/Face_Scanner/face_recognizer/training/",
+        "output_directory": "training",
         "image_directory": name,
         "format": "jpg"
     }
@@ -74,10 +76,11 @@ def copy_training_to_validation(source_diretory, destination_directory):
     else:
         print(f"Successfully copied {source_diretory} to {destination_directory}")
 
-#def copy_training_to_test():
-    
-    # Implement the logic to copy the training images to the test folder
-    # Up to consideration.
+
+# def copy_training_to_test():
+
+# Implement the logic to copy the training images to the test folder
+# Up to consideration.
 """      try:
         # Check if the source directory exists
         if not os.path.exists(training_dir):
@@ -101,8 +104,7 @@ def copy_training_to_validation(source_diretory, destination_directory):
 
     except Exception as e:
         print(f"An error occurred: {str(e)}") """
- 
 
 if __name__ == "__main__":
     option()
-    
+
