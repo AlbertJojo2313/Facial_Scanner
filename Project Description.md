@@ -3,23 +3,20 @@ This project is a Python-based facial recognition system that allows you to trai
 Facial recognition is a popular and widely used technology with applications in security, surveillance, and various other fields. This project provides a Python-based implementation of a facial recognition system that can be used for training, validation, and recognition tasks.
 
 Key Features:
+    Training: Harness the potential of the system by training your facial recognition model with a dataset of known faces. Choose between the CPU-efficient "hog" model and the GPU-accelerated "cnn" model for optimal performance.
 
-    Training: The project allows you to train the facial recognition model on a dataset of known faces. 
-              You can specify whether to use the "hog" or "cnn" model for training, where "hog" is CPU-based, and "cnn" is GPU-based for better performance.
+Validation: Post-training, assess your model's accuracy with precision using a dedicated validation dataset. The validation process provides clear visual feedback by showcasing recognized faces within validation images, allowing for a thorough evaluation of model performance.
 
-    Validation: After training, you can validate the accuracy of the trained model using a separate dataset. 
-                The validation process displays recognized faces in the validation images and helps assess the model's performance.
+Testing: Put your trained model to the test by identifying faces within unknown images. Simply provide the path to an image containing unidentified faces, and the system seamlessly identifies and annotates recognized faces, streamlining the recognition process.
 
-    Testing: You can also use the trained model to recognize faces in unknown images. 
-             Simply provide the path to an image with unknown faces, and the system will identify and label the recognized faces in the image.
-
-    Customizable Output: Recognized faces are highlighted with bounding boxes in blue, and their names are displayed in white text on a blue background. 
-                         This makes it easy to visualize and identify the recognized faces.
+Customizable Output: Recognized faces receive special treatment with striking blue bounding boxes and white text labels set against a blue background. This visually intuitive representation simplifies the identification of recognized faces, ensuring a user-friendly experience for all.
 
 
 Dependencies:
-
     face_recognition: Used for face detection and recognition.
     Pillow: Used for image processing and drawing bounding boxes.
     pickle: Used for serializing and deserializing data.
     argparse: Used for command-line argument parsing.
+    mtcnn: Used for face detection with the MTCNN (Multi-task Cascaded Convolutional Networks) model.
+    numpy: Used for numerical operations and handling image data.
+    tqdm: Used for creating progress bars for tasks such as validation.
