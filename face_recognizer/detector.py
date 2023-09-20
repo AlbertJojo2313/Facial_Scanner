@@ -1,74 +1,122 @@
-from pathlib import Path
-import sqlite3
+import concurrent.futures.thread
+from concurrent.futures.thread import ThreadPoolExecutor
 from collections import Counter
 from PIL import Image, ImageDraw
-import face_recognition
+from mtcnn import MTCNN
+from tqdm import tqdm
 import pickle
 import argparse
+import os
+import numpy as np
+import face_recognition  # Add this import statement for face_recognition
 
-DATABASE_FILE = "user_database.db"
-IMAGE_FOLDER = "user_images"
-DEFAULT_ENCODINGS_PATH = Path("output/encodings.pkl")
+
+DEFAULT_ENCODINGS_PATH = "output/encodings.pkl"
 BOUNDING_BOX_COLOR = "blue"
 TEXT_COLOR = "white"
 
-# Create an argument parser to handle command line arguments
 parser = argparse.ArgumentParser(description="Recognize faces in an image")
 parser.add_argument("--train", action="store_true", help="Train on input data")
-parser.add_argument("--validate", action="store_true", help="Validate trained model")
-parser.add_argument("--test", action="store_true", help="Test the model with an unknown image")
-parser.add_argument("m", action="store", default="hog", choices=["hog", "cnn"], help="which model to use for training: hog (CPU), cnn (GPU)")
+parser.add_argument("--validate", action="store_true", help="Validate trained face recognition model")
+parser.add_argument("--test", action="store_true", help="Test the face recognition model with an unknown image")
+parser.add_argument("--recognition-model", default="hog", choices=["hog", "cnn"], help="which model to use for face recognition: hog (CPU), cnn (GPU)")
 parser.add_argument("-f", action="store", help="Path to an image with an unknown face")
-parser.add_argument("--register", action="store_true", help="Register a new user")
-parser.add_argument("--username", action="store", help="Username for user registration")
 args = parser.parse_args()
 
-# Create necessary directories if they don't exist
-Path("training").mkdir(parents=True, exist_ok=True)
-Path("output").mkdir(parents=True, exist_ok=True)
-Path("validation").mkdir(parents=True, exist_ok=True)
+TRAINING_DIR = "training"
+VALIDATION_DIR = "validation"
+OUTPUT_DIR = "output"
 
-# Function to encode known faces and store them in a pickle file
-def encode_known_faces(model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
+os.makedirs(TRAINING_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+os.makedirs(VALIDATION_DIR, exist_ok=True)
+
+# Create an MTCNN detector
+detector = MTCNN()
+
+def encode_known_faces_batch(filepaths, model="hog"):
     names = []
     encodings = []
-    for filepath in Path("training").rglob("*/*"):
-        name = filepath.parent.name
-        image = face_recognition.load_image_file(filepath)
 
-        # Detect the locations of faces in each image
-        face_locations = face_recognition.face_locations(image, model=model)
-        # Generate encodings for the detected faces in an image
-        face_encodings = face_recognition.face_encodings(image, face_locations)
+    for filepath in filepaths:
+        # Check if the file is a valid image file
+        try:
+            image = Image.open(filepath)
+        except (OSError, PIL.UnidentifiedImageError) as e:
+            print(f"Skipping {filepath}: {e}")
+            continue
+
+        name = os.path.basename(os.path.dirname(filepath))
+        pixels = image.convert("RGB")
+        pixels = pixels.resize((160, 160))
+        pixels = np.asarray(pixels)
+
+        # Detect faces using MTCNN
+        face_locations = detector.detect_faces(pixels)
+        if len(face_locations) == 0:
+            continue
+
+        x, y, w, h = face_locations[0]['box']
+        face = pixels[y:y+h, x:x+w]
+
+        # Encode the detected face using face_recognition
+        face_encodings = face_recognition.face_encodings(face)
 
         for encoding in face_encodings:
             names.append(name)
             encodings.append(encoding)
 
+    return names, encodings
+def encode_known_faces(model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
+    filepaths = []
+    for root, _, files in os.walk(TRAINING_DIR):
+        for file in files:
+            filepaths.append(os.path.join(root, file))
+
+    batch_size = 100  # Adjust the batch size as needed
+    with ThreadPoolExecutor() as executor:
+        for i in range(0, len(filepaths), batch_size):
+            batch_filepaths = filepaths[i:i + batch_size]
+            names, encodings = executor.submit(encode_known_faces_batch, batch_filepaths, model).result()
+
     name_encodings = {"names": names, "encodings": encodings}
-    with encodings_location.open(mode="wb") as f:
+    with open(encodings_location, "wb") as f:
         pickle.dump(name_encodings, f)
 
-# Function to recognize faces in an image and display bounding boxes and names
 def recognize_faces(image_location, model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
-    with encodings_location.open(mode="rb") as f:
+    with open(encodings_location, "rb") as f:
         loaded_encodings = pickle.load(f)
-    input_image = face_recognition.load_image_file(image_location)
-    input_face_locations = face_recognition.face_locations(input_image, model=model)
-    input_face_encodings = face_recognition.face_encodings(input_image, input_face_locations)
+    input_image = Image.open(image_location)
+    pixels = input_image.convert("RGB")
+    pixels = pixels.resize((160, 160))
+    pixels = np.asarray(pixels)
 
-    pillow_image = Image.fromarray(input_image)
+    # Detect faces using MTCNN
+    face_locations = detector.detect_faces(pixels)
+    input_face_encodings = []
+
+    for face_location in face_locations:
+        x, y, w, h = face_location['box']
+        face = pixels[y:y+h, x:x+w]
+
+        # Encode the detected face using face_recognition
+        face_encoding = face_recognition.face_encodings(face)
+        input_face_encodings.append(face_encoding)
+
+    pillow_image = Image.fromarray(pixels)
     draw = ImageDraw.Draw(pillow_image)
 
-    for bounding_box, unknown_encoding in zip(input_face_locations, input_face_encodings):
-        name = _recognize_face(unknown_encoding, loaded_encodings)
+    for i, face_encoding in enumerate(input_face_encodings):
+        name = _recognize_face(face_encoding, loaded_encodings)
         if not name:
             name = "Unknown"
-        _display_face(draw, bounding_box, name)
+
+        x, y, _, _ = face_locations[i]['box']
+        _display_face(draw, x, y, name)
+
     del draw
     pillow_image.show()
 
-# Function to recognize a single face
 def _recognize_face(unknown_encoding, loaded_encodings):
     boolean_matches = face_recognition.compare_faces(loaded_encodings["encodings"], unknown_encoding)
     votes = Counter(
@@ -79,71 +127,30 @@ def _recognize_face(unknown_encoding, loaded_encodings):
     if votes:
         return votes.most_common(1)[0][0]
 
-# Function to display the face with a bounding box and name
-def _display_face(draw, bounding_box, name):
-    top, right, bottom, left = bounding_box
-    draw.rectangle(((left, top), (right, bottom)), outline=BOUNDING_BOX_COLOR)
-    text_left, text_top, text_right, text_bottom = draw.textbbox((left, bottom), name)
-    draw.rectangle((text_left, text_top), (text_right, text_bottom),
-                   fill="blue",
-                   outline="blue"
-                   )
+def _display_face(draw, x, y, name):
+    draw.rectangle(((x, y), (x+160, y+160)), outline=BOUNDING_BOX_COLOR)
+    draw.rectangle((x, y + 160, x + 160, y + 200), fill="blue", outline="blue")
     draw.text(
-        (text_left, text_top),
+        (x + 10, y + 160),
         name,
         fill="white",
     )
 
-# Function to validate the model
 def validate(model="hog"):
-    for filepath in Path("validation").rglob("*"):
-        if filepath.is_file():
-            recognize_faces(image_location=str(filepath.absolute()), model=model)
+    filepaths = []
+    for root, _, files in os.walk(VALIDATION_DIR):
+        for file in files:
+            filepaths.append(os.path.join(root, file))
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for filepath in tqdm(filepaths, desc="Validating Faces"):
+            executor.submit(recognize_faces, image_location=filepath, model=model)
 
 if __name__ == "__main__":
     if args.train:
-        encode_known_faces(model=args.m)
+        encode_known_faces(model=args.recognition_model)
     if args.validate:
-        validate(model=args.m)
+        validate(model=args.recognition_model)  # Use args.recognition_model here
     if args.test:
-        recognize_faces(image_location=args.f, model=args.m)
+        recognize_faces(image_location=args.f, model=args.recognition_model)  # Use args.recognition_model here
 
-# User Registration Functions
-def create_user_table():
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-
-    # Create the user table if it doesn't exist
-    cursor.execute('''CREATE TABLE IF NOT EXISTS users
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT,
-                       username TEXT NOT NULL UNIQUE,
-                       encoding TEXT NOT NULL)''')
-
-    conn.commit()
-    conn.close()
-
-def register_user(username, image_path):
-    # Load the user image and generate a face encoding
-    user_image = face_recognition.load_image_file(image_path)
-    face_encoding = face_recognition.face_encodings(user_image)[0]
-
-    # Store the face encoding in the database
-    conn = sqlite3.connect(DATABASE_FILE)
-    cursor = conn.cursor()
-
-    # Insert the user's data into the database
-    cursor.execute("INSERT INTO users (username, encoding) VALUES (?, ?)", (username, str(face_encoding)))
-
-    conn.commit()
-    conn.close()
-
-if __name__ == "__main__":
-    if args.train:
-        encode_known_faces(model=args.m)
-    if args.validate:
-        validate(model=args.m)
-    if args.test:
-        recognize_faces(image_location=args.f, model=args.m)
-    if args.register and args.username:
-        create_user_table()
-        register_user(args.username, args.f)
