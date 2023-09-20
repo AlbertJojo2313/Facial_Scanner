@@ -3,7 +3,8 @@ This project is a Python-based facial recognition system that allows you to trai
 Facial recognition is a popular and widely used technology with applications in security, surveillance, and various other fields. This project provides a Python-based implementation of a facial recognition system that can be used for training, validation, and recognition tasks.
 
 Key Features:
-    Training: Harness the potential of the system by training your facial recognition model with a dataset of known faces. Choose between the CPU-efficient "hog" model and the GPU-accelerated "cnn" model for optimal performance.
+
+Training: Harness the potential of the system by training your facial recognition model with a dataset of known faces. Choose between the CPU-efficient "hog" model and the GPU-accelerated "cnn" model for optimal performance.
 
 Validation: Post-training, assess your model's accuracy with precision using a dedicated validation dataset. The validation process provides clear visual feedback by showcasing recognized faces within validation images, allowing for a thorough evaluation of model performance.
 
