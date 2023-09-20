@@ -1,5 +1,5 @@
-import concurrent.futures.thread
-from concurrent.futures.thread import ThreadPoolExecutor
+import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 from collections import Counter
 from PIL import Image, ImageDraw
 from mtcnn import MTCNN
@@ -9,7 +9,6 @@ import argparse
 import os
 import numpy as np
 import face_recognition  # Add this import statement for face_recognition
-
 
 DEFAULT_ENCODINGS_PATH = "output/encodings.pkl"
 BOUNDING_BOX_COLOR = "blue"
@@ -42,7 +41,7 @@ def encode_known_faces_batch(filepaths, model="hog"):
         # Check if the file is a valid image file
         try:
             image = Image.open(filepath)
-        except (OSError, PIL.UnidentifiedImageError) as e:
+        except (OSError, Image.UnidentifiedImageError) as e:
             print(f"Skipping {filepath}: {e}")
             continue
 
@@ -67,6 +66,7 @@ def encode_known_faces_batch(filepaths, model="hog"):
             encodings.append(encoding)
 
     return names, encodings
+
 def encode_known_faces(model="hog", encodings_location=DEFAULT_ENCODINGS_PATH):
     filepaths = []
     for root, _, files in os.walk(TRAINING_DIR):
@@ -153,4 +153,3 @@ if __name__ == "__main__":
         validate(model=args.recognition_model)  # Use args.recognition_model here
     if args.test:
         recognize_faces(image_location=args.f, model=args.recognition_model)  # Use args.recognition_model here
-
